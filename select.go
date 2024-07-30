@@ -268,6 +268,10 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		actionHandled := false
 
 		for _, action := range s.CustomActions {
+			fmt.Println("action", action)
+			fmt.Println("key", key)
+			fmt.Println("action.Key", action.Key)
+
 			if key == action.Key {
 				action.Action(pos)
 				actionHandled = true
