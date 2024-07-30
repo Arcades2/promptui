@@ -62,6 +62,9 @@ type Select struct {
 	// more info.
 	Keys *SelectKeys
 
+	// CustomActions is a list of custom actions that can be triggered by the user.
+	CustomActions []CustomAction
+
 	// Searcher is a function that can be implemented to refine the base searching algorithm in selects.
 	//
 	// Search is a function that will receive the searched term and the item's index and should return a boolean
@@ -80,6 +83,11 @@ type Select struct {
 
 	Stdin  io.ReadCloser
 	Stdout io.WriteCloser
+}
+
+type CustomAction struct {
+	Action func()
+	Key    rune
 }
 
 // SelectKeys defines the available keys used by select mode to enable the user to move around the list
@@ -116,24 +124,27 @@ type Key struct {
 // text/template syntax. Custom state, colors and background color are available for use inside
 // the templates and are documented inside the Variable section of the docs.
 //
-// Examples
+// # Examples
 //
 // text/templates use a special notation to display programmable content. Using the double bracket notation,
 // the value can be printed with specific helper functions. For example
 //
 // This displays the value given to the template as pure, unstylized text. Structs are transformed to string
 // with this notation.
-// 	'{{ . }}'
+//
+//	'{{ . }}'
 //
 // This displays the name property of the value colored in cyan
-// 	'{{ .Name | cyan }}'
+//
+//	'{{ .Name | cyan }}'
 //
 // This displays the label property of value colored in red with a cyan background-color
-// 	'{{ .Label | red | cyan }}'
+//
+//	'{{ .Label | red | cyan }}'
 //
 // See the doc of text/template for more info: https://golang.org/pkg/text/template/
 //
-// Notes
+// # Notes
 //
 // Setting any of these templates will remove the icons from the default templates. They must
 // be added back in each of their specific templates. The styles.go constants contains the default icons.
@@ -254,44 +265,57 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 	s.list.SetStart(scroll)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
-		switch {
-		case key == KeyEnter:
-			return nil, 0, true
-		case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
-			s.list.Next()
-		case key == s.Keys.Prev.Code || (key == 'k' && !searchMode):
-			s.list.Prev()
-		case key == s.Keys.Search.Code:
-			if !canSearch {
-				break
-			}
+		actionExecuted := false
 
-			if searchMode {
-				searchMode = false
-				cur.Replace("")
-				s.list.CancelSearch()
-			} else {
-				searchMode = true
-			}
-		case key == KeyBackspace || key == KeyCtrlH:
-			if !canSearch || !searchMode {
+		for _, action := range s.CustomActions {
+			if key == action.Key {
+				action.Action()
+				actionExecuted = true
 				break
-			}
 
-			cur.Backspace()
-			if len(cur.Get()) > 0 {
-				s.list.Search(cur.Get())
-			} else {
-				s.list.CancelSearch()
 			}
-		case key == s.Keys.PageUp.Code || (key == 'h' && !searchMode):
-			s.list.PageUp()
-		case key == s.Keys.PageDown.Code || (key == 'l' && !searchMode):
-			s.list.PageDown()
-		default:
-			if canSearch && searchMode {
-				cur.Update(string(line))
-				s.list.Search(cur.Get())
+		}
+
+		if !actionExecuted {
+			switch {
+			case key == KeyEnter:
+				return nil, 0, true
+			case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
+				s.list.Next()
+			case key == s.Keys.Prev.Code || (key == 'k' && !searchMode):
+				s.list.Prev()
+			case key == s.Keys.Search.Code:
+				if !canSearch {
+					break
+				}
+
+				if searchMode {
+					searchMode = false
+					cur.Replace("")
+					s.list.CancelSearch()
+				} else {
+					searchMode = true
+				}
+			case key == KeyBackspace || key == KeyCtrlH:
+				if !canSearch || !searchMode {
+					break
+				}
+
+				cur.Backspace()
+				if len(cur.Get()) > 0 {
+					s.list.Search(cur.Get())
+				} else {
+					s.list.CancelSearch()
+				}
+			case key == s.Keys.PageUp.Code || (key == 'h' && !searchMode):
+				s.list.PageUp()
+			case key == s.Keys.PageDown.Code || (key == 'l' && !searchMode):
+				s.list.PageDown()
+			default:
+				if canSearch && searchMode {
+					cur.Update(string(line))
+					s.list.Search(cur.Get())
+				}
 			}
 		}
 
@@ -355,7 +379,6 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 
 	for {
 		_, err = rl.Readline()
-
 		if err != nil {
 			switch {
 			case err == readline.ErrInterrupt, err.Error() == "Interrupt":
