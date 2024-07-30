@@ -268,7 +268,7 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		for _, action := range s.CustomActions {
 			if key == action.Key {
 				action.Action(pos)
-				return nil, 0, true
+				return line, pos, false
 			}
 		}
 
