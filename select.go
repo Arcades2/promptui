@@ -245,8 +245,8 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 	if s.IsVimMode {
 		c.VimMode = true
 	}
-
 	c.HistoryLimit = -1
+
 	c.UniqueEditLine = true
 
 	rl, err := readline.NewEx(c)
@@ -265,51 +265,56 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 	s.list.SetStart(scroll)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
+		actionHandled := false
+
 		for _, action := range s.CustomActions {
 			if key == action.Key {
 				action.Action(pos)
-				return line, pos, false
+				actionHandled = true
+				break
 			}
 		}
 
-		switch {
-		case key == KeyEnter:
-			return nil, 0, true
-		case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
-			s.list.Next()
-		case key == s.Keys.Prev.Code || (key == 'k' && !searchMode):
-			s.list.Prev()
-		case key == s.Keys.Search.Code:
-			if !canSearch {
-				break
-			}
+		if !actionHandled {
+			switch {
+			case key == KeyEnter:
+				return nil, 0, true
+			case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
+				s.list.Next()
+			case key == s.Keys.Prev.Code || (key == 'k' && !searchMode):
+				s.list.Prev()
+			case key == s.Keys.Search.Code:
+				if !canSearch {
+					break
+				}
 
-			if searchMode {
-				searchMode = false
-				cur.Replace("")
-				s.list.CancelSearch()
-			} else {
-				searchMode = true
-			}
-		case key == KeyBackspace || key == KeyCtrlH:
-			if !canSearch || !searchMode {
-				break
-			}
+				if searchMode {
+					searchMode = false
+					cur.Replace("")
+					s.list.CancelSearch()
+				} else {
+					searchMode = true
+				}
+			case key == KeyBackspace || key == KeyCtrlH:
+				if !canSearch || !searchMode {
+					break
+				}
 
-			cur.Backspace()
-			if len(cur.Get()) > 0 {
-				s.list.Search(cur.Get())
-			} else {
-				s.list.CancelSearch()
-			}
-		case key == s.Keys.PageUp.Code || (key == 'h' && !searchMode):
-			s.list.PageUp()
-		case key == s.Keys.PageDown.Code || (key == 'l' && !searchMode):
-			s.list.PageDown()
-		default:
-			if canSearch && searchMode {
-				cur.Update(string(line))
-				s.list.Search(cur.Get())
+				cur.Backspace()
+				if len(cur.Get()) > 0 {
+					s.list.Search(cur.Get())
+				} else {
+					s.list.CancelSearch()
+				}
+			case key == s.Keys.PageUp.Code || (key == 'h' && !searchMode):
+				s.list.PageUp()
+			case key == s.Keys.PageDown.Code || (key == 'l' && !searchMode):
+				s.list.PageDown()
+			default:
+				if canSearch && searchMode {
+					cur.Update(string(line))
+					s.list.Search(cur.Get())
+				}
 			}
 		}
 
