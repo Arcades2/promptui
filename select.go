@@ -318,6 +318,8 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 			}
 		}
 
+		actionHandled = false
+
 		if searchMode {
 			header := SearchPrompt + cur.Format()
 			sb.WriteString(header)
