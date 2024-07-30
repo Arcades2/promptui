@@ -266,8 +266,6 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
 		switch {
-		case key == KeyEnter:
-			return nil, 0, true
 		case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
 			s.list.Next()
 		case key == s.Keys.Prev.Code || (key == 'k' && !searchMode):
@@ -300,9 +298,6 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		case key == s.Keys.PageDown.Code || (key == 'l' && !searchMode):
 			s.list.PageDown()
 		default:
-			if key == 't' {
-				fmt.Println("t key pressed")
-			}
 			if canSearch && searchMode {
 				cur.Update(string(line))
 				s.list.Search(cur.Get())
