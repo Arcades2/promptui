@@ -267,10 +267,12 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
 		actionHandled := false
 
+		fmt.Println("Triggered !")
+		fmt.Println("key", key)
 		for _, action := range s.CustomActions {
-			fmt.Println("action", action)
-			fmt.Println("key", key)
+			fmt.Println("custom actions")
 			fmt.Println("action.Key", action.Key)
+			fmt.Println("action", action)
 
 			if key == action.Key {
 				action.Action(pos)
@@ -282,6 +284,7 @@ func (s *Select) innerRun(cursorPos, scroll int, top rune) (int, string, error) 
 		if !actionHandled {
 			switch {
 			case key == KeyEnter:
+				println("key enter")
 				return nil, 0, true
 			case key == s.Keys.Next.Code || (key == 'j' && !searchMode):
 				s.list.Next()
